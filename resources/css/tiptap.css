@@ -1,0 +1,100 @@
+.red-background {
+    background-color: #fca5a5;
+  }
+  
+  .yellow-background {
+    background-color: #fcd34d;
+  }
+  
+  .green-background {
+    background-color: #bbf7d0;
+  }
+  
+  .prose {
+    max-width: 100%;
+    --tw-prose-links: #3498DB;
+  }
+  
+  .prose a {
+    color: #3498DB;
+  }
+  
+  .prose p {
+    /* margin-bottom: 1em; */
+    /* display: inline;
+    text-align: justify;  */
+  }
+  
+  .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+  }
+  
+  .prose ul,
+  .prose ol {
+    margin-bottom: 1em;
+    /* padding-left: 1.5em; */
+    display: inline-block; 
+  }
+  
+  .prose ul li,
+  .prose ol li {
+    position: relative;
+    /* padding-left: 1.5em;  */
+  }
+  
+  /* .prose ul li:before {
+    content: '\2022';
+    position: absolute;
+    left: 0;
+  } */
+  
+  /* .prose ol li:before {
+    counter-increment: my-counter; 
+    content: counter(my-counter) '. '; 
+    position: absolute;
+    left: 0;
+  } */
+  
+  .prose blockquote {
+    margin-left: 1.5em;
+    border-left: 2px solid #000;
+    padding: 1em;
+    margin-bottom: 1em;
+    margin-top: 1em;
+    text-align: justify;
+
+
+  }
+  
+  .prose code {
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+  }
+  
+  .prose pre {
+    padding: 1em;
+    border-radius: 4px;
+    overflow: auto;
+  }
+  
+  .prose img {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  .prose hr {
+    border: 1px solid #ddd;
+    margin: 1em 0;
+  }
+  
+  .prose ol + p {
+    display: inline-block; 
+  }
+  
+  .prose ul + p {
+    display: inline-block; 
+  }
+  
+ 

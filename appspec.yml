@@ -1,0 +1,33 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /var/www/html/tdms
+file_exists_behavior: OVERWRITE
+
+permissions:
+  - object: /var/www/html/tdms
+    owner: ubuntu
+    group: ubuntu
+    mode: 775
+    type:
+      - directory
+  - object: /var/www/html/tdms
+    owner: ubuntu
+    group: ubuntu
+    except: [/var/www/html/storage, /var/www/html/tdms/public/uploads]
+    mode: 644
+    type:
+      - file
+  - object: /var/www/html/storage
+    owner: ubuntu
+    group: ubuntu
+    mode: 777
+    type:
+      - directory
+  - object: /var/www/html/tdms/public/uploads
+    owner: ubuntu
+    group: ubuntu
+    mode: 777
+    type:
+      - directory

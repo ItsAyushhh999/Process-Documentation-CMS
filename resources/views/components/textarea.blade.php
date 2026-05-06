@@ -1,0 +1,1 @@
+<textarea class=" dark:text-gray-300 border-gray-300 dark:border-gray-600 dark:bg-stone-800 rounded-md shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50" name="description" {{ $attributes }}>{{ $slot }}</textarea>

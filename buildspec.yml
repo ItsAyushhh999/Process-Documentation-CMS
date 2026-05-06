@@ -1,0 +1,21 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - npm install
+      - composer install
+  pre_build:
+    commands:
+      # Any pre-build commands if needed
+  build:
+    commands:
+      - npm run build
+  post_build:
+    commands:
+
+artifacts:
+  files:
+      - '**/*'
