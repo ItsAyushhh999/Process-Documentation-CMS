@@ -165,6 +165,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [DailyFeedController::class, 'index'])->name('dailyFeeds.index');
         Route::get('/show', [DailyFeedController::class, 'show'])->name('dailyFeeds.show');
     });
+
+    // Notification Routes
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'getLatestNotifications']);
+        Route::get('/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+    });
 });
 
 /*
@@ -186,9 +194,6 @@ Route::prefix('cronJobs')->group(function () {
     Route::get('/config', [CronJobController::class, 'configure']);
     Route::get('/notify/deploy/logs', [CronJobController::class, 'deployStatus']);
     Route::get('/taskToReview', [CronJobController::class, 'taskToReview']);
-});
-Route::prefix('notifications')->group(function () {
-    Route::get('/', [NotificationController::class, 'getLatestNotifications']);
 });
 
 Route::get('/tasks/{id}/status/{status}', [TasksCommentController::class, 'notifyCicdAlert'])->name('notifyCicdAlert');
