@@ -22,9 +22,9 @@ export default defineConfig({
         }),
     ],
     build: {
-      commonjsOptions: {
-        transformMixedEsModules: true
-      },
+        commonjsOptions: {
+            transformMixedEsModules: true
+        },
     },
     resolve: {
         alias: {

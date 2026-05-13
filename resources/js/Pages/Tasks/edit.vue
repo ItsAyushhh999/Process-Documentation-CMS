@@ -152,13 +152,14 @@ watch(idle, (idleValue) => {
           :collaborators = "props.collaborators"
           :user="props.auth.user"
         />
-        <DeployLogsModal :project="task.project" :taskId="task.id" />
+        <DeployLogsModal :project="task.project" :taskId="task.id" :taskStatus="task.status" />
         <PullRequests
           :project="task.project"
           :isReview="isReview"
           :assigneesIds="assigneesIds"
           :reviewersIds="reviewersIds"
           :taskId="task.id"
+          :taskStatus="task.status"
         />
       </div>
     </template>
@@ -166,34 +167,33 @@ watch(idle, (idleValue) => {
       <div class="grid lg:grid-cols-2 gap-20 h-full">
         <!-- <TaskDetail :data="task" /> -->
         <div class="h-auto overflow-y-auto pt-5 md:block hidden pb-24 pr-3">
-          <template v-if="isSuperAdmin">
-            <TaskUpdateForm
-              :task-detail="{
-                task: task,
-                projects: projects,
-                assignees: assignees,
-                reviewers: reviewers,
-                attachments: attachments,
-                //  taskIds: taskIds,
-                task_types: task_types
-              }"
-              :taskIds="selectedType"
-              @reloadPage="reloadPage"
-              :collaborators="_collaborators"
-            />
-          </template>
-          <template v-else>
-            <TaskDetail
-              :data="{
-                task: task,
-                assignees: assignees,
-                reviewers: reviewers,
-                attachments: attachments,
-                projectName: task.project.name,
-                taskStatus:taskStatus,
-              }"
-            />
-          </template>
+            <template v-if="isSuperAdmin">
+              <TaskUpdateForm
+                :task-detail="{
+                  task: task,
+                  projects: projects,
+                  assignees: assignees,
+                  reviewers: reviewers,
+                  attachments: attachments,
+                  task_types: task_types
+                }"
+                :taskIds="selectedType"
+                @reloadPage="reloadPage"
+                :collaborators="_collaborators"
+              />
+            </template>
+            <template v-else>
+              <TaskDetail
+                :data="{
+                  task: task,
+                  assignees: assignees,
+                  reviewers: reviewers,
+                  attachments: attachments,
+                  projectName: task.project.name,
+                  taskStatus: taskStatus,
+                }"
+              />
+            </template>
         </div>
 
         <div class="h-auto overflow-y-auto md:pr-4 w-full pb-24">
@@ -214,6 +214,11 @@ watch(idle, (idleValue) => {
             }"
             :assignedStatusArr="taskStatus"
             :liveComment="liveComments"
+            :project="task.project"
+            :isReview="isReview"
+            :assigneesIds="assigneesIds"
+            :reviewersIds="reviewersIds"
+            :taskId="task.id"
             @reloadPage="reloadPage"
           />
         </div>

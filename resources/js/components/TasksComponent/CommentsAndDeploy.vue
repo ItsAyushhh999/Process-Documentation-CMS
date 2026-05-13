@@ -8,6 +8,7 @@ import AppButton from '@/components/AppButton.vue';
 import axios from 'axios';
 import AppIcon from '../../components/AppIcon.vue';
 import pusher from '@/utils/pusher.js';
+import PullRequests from '@/components/TasksComponent/PullRequests.vue';
 
 const props = defineProps({
   taskDetail: {
@@ -18,8 +19,9 @@ const props = defineProps({
     type: Array,
     default: []
   },
-  liveComment: { type: Object, default: null }
+  liveComment: { type: Object, default: null },
 });
+
 const emit = defineEmits(['reloadPage']);
 const TasksComment = ref(null);
 const loadingComment = ref(true);
