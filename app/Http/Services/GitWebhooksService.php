@@ -259,6 +259,7 @@ class GitWebhooksService
             $response['pull_request_sender_url'] = data_get($pullRequest, 'user')['html_url'];
             $response['pull_request_comment'] = $comment;
             $response['repository_full_name'] = data_get($pullRequest, 'merge_commit_sha');
+            $response['target_branch'] = $ref;
 
             if (isset($response['pull_request_sender_username'])) {
                 if (data_get($pullRequest, 'merged')) {

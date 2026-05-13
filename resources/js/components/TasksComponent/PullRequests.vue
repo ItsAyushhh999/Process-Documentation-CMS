@@ -31,9 +31,17 @@ const props = defineProps({
   buttonFlag:{
     type: Number,
     default: 0
-  }
-
+  },
+  inlineMode: { type: Boolean, default: false },
+  taskStatus: { default: null },
 });
+
+const getStage = (status) => {
+  const s = String(status);
+  if (['10', '11'].includes(String(status))) return { label: 'Production', class: 'bg-green-100 text-green-800' };
+  if (['8', '9'].includes(String(status)))   return { label: 'Staging',    class: 'bg-yellow-100 text-yellow-800' };
+  return                                              { label: 'Development', class: 'bg-blue-100 text-blue-800' };
+};
 
 const isModelOpen = ref(false);
 const pullRequestData = ref([]);
@@ -44,16 +52,60 @@ const modalTitle = ref(null);
 const modalDescription = ref(null)
 const { flashMessage } = usePage().props;
 
-const repo = ref('0');
+const repo = ref(null);
 
-const columns = [
+const columns = computed(() => props.inlineMode ? [
+  {
+    title: 'PR no.',
+    field: 'pull_request_id',
+    minWidth: 120,
+  },
+  {
+    title: 'Title',
+    field: 'pull_request_title',
+    minWidth: 200,
+  },
+  {
+    title: 'Repository',
+    field: 'repository_name',
+    minWidth: 160,
+  },
+  {
+    title: 'Status',
+    field: 'status',
+    minWidth: 120,
+  },
+  {
+    title: 'Stage',
+    field: 'pull_request_id',
+    minWidth: 130,
+    formatter: () => {
+      const stage = getStage(props.taskStatus);
+      return `<span class="px-2 py-1 rounded-full text-xs font-semibold ${stage.class}">${stage.label}</span>`;
+    }
+  },
+  {
+    title: 'Created By',
+    field: 'pull_request_sender_username',
+    minWidth: 160,
+  },
+  {
+    title: 'PR Link',
+    field: 'pull_request_url',
+    minWidth: 160,
+    formatter: (cell) => {
+      const url = cell.getValue();
+      return url ? `<a href="${url}" target="_blank" class="text-blue-500 underline">View PR</a>` : '-';
+    }
+  },
+] : [
   {
     title: 'PR no.',
     field: 'number',
     minWidth: 120,
   },
   {
-    title: 'Ttitle',
+    title: 'Title',
     field: 'title',
     minWidth: 200,
   },
@@ -69,10 +121,7 @@ const columns = [
     formatter: (cell) => {
       return formatterComponent({
         component: ActionButton,
-        props: {
-          data: cell.getData().source,
-          isSource: true
-        }
+        props: { data: cell.getData().source, isSource: true }
       });
     }
   },
@@ -83,10 +132,7 @@ const columns = [
     formatter: (cell) => {
       return formatterComponent({
         component: ActionButton,
-        props: {
-          data: cell.getData().target,
-          isTarget: true
-        }
+        props: { data: cell.getData().target, isTarget: true }
       });
     }
   },
@@ -102,27 +148,29 @@ const columns = [
     formatter: (cell) => {
       return formatterComponent({
         component: ActionButton,
-        props: {
-          // isLink: true,
-          // url: `./tasks/${ cell.getData().id}/edit`,
-          data: cell.getData(),
-          onHandleMerge: openMergeModal
-        }
+        props: { data: cell.getData(), onHandleMerge: openMergeModal }
       });
     }
   }
-
-];
+]);
 
 
 // console.log('Modal', props.project);
 
 // /pull_request
 const openPullRequestModal = async() => {
-  // if(!repo.value){
-  //   console.log("false")
-  //   return
-  // }
+  isLoading.value = true;
+
+  if (props.inlineMode) {
+    const res = await axios.get('/github/pull-request/logs', { params: { task_id: props.taskId } });
+    pullRequestData.value = res.data?.githubWebhooks || [];
+    isLoading.value = false;
+    return;
+  }
+  if (!repo.value || repo.value === 'null') {
+    console.log("No repository selected");
+    return;
+  }
   isLoading.value = true;
   const prForm = useForm({
     repository_name: repo.value,
@@ -278,14 +326,19 @@ const processSubprojects = () => {
 
 // Fetch permissions and process subprojects after fetching is complete
 onMounted(async () => {
+  console.log('task.project:', JSON.stringify(props.project));
   await fetchPermissions();
   processSubprojects(); // Ensure permissions are fully loaded before this is called
+  
+  if (props.inlineMode) {
+    await openPullRequestModal(); // auto-load PRs without opening modal
+  }
 });
 
 </script>
 
 <template>
-  <div class="inline-flex gap-3" v-if=" Object.values(deployPermissions).filter(value => value.length > 0).length > 0  && isReview">
+  <div class="inline-flex gap-3" v-if="!inlineMode && Object.values(deployPermissions).filter(value => value.length > 0).length > 0 && isReview">
     <!-- <AppTextInput v-model="repo" name="Repo" required placeholder="Category"/> -->
 
     <div class="w-[240px]" v-if="project?.subprojects && project?.subprojects?.length > 0">
@@ -330,6 +383,28 @@ onMounted(async () => {
         </span>
         <AppIcon v-else name="fa-code-pull-request"/>
         </app-button>
+  </div>
+  <div v-if="inlineMode" class="w-full">
+    <div class="mb-4 w-[240px]" v-if="project?.subprojects?.length > 0 || project?.parent_project?.subprojects?.length > 0">
+      <select v-model="repo" @change="openPullRequestModal" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-500 text-primary-900 dark:text-gray-300 text-sm rounded-md outline-none focus:ring-0 hover:bg-gray-100 dark:hover:bg-gray-700 focus:border-primary-500 block w-full py-3 px-2 h-[44px]">
+        <option value="null" disabled>Select Repository</option>
+        <template v-for="elem in (project?.subprojects?.length > 0 ? project.subprojects : project?.parent_project?.subprojects)" :key="elem.id">
+          <option v-if="elem.repository_name && hasPermission(elem.id)" :value="elem.repository_name">
+            {{ elem.repository_name }}
+          </option>
+        </template>
+      </select>
+    </div>
+
+    <div class="h-[100px] w-full flex items-center justify-center" v-if="isLoading">
+      <AppLoader />
+    </div>
+    <div v-else-if="pullRequestData && pullRequestData.length > 0">
+      <AppDataTable :data="pullRequestData" :columns="columns" />
+    </div>
+    <div v-else class="h-[200px] w-full flex items-center justify-center text-gray-400">
+      <span>No pull requests found</span>
+    </div>
   </div>
   <Modal :show="isModelOpen" @close="closeModal" maxWidth="8xl">
     <template #header>

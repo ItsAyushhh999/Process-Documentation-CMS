@@ -2,139 +2,119 @@
 import AppDataTable from '@/components/AppDataTable.vue';
 import AppButton from '@/components/AppButton.vue';
 import Modal from '@/components/Modal.vue';
-import { inject, ref } from 'vue';
-import { useForm, usePage } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
 import AppLoader from '@/components/AppLoader.vue';
 
-
 const props = defineProps({
-  project: {
-    type: Object,
-    default: null
-  },
-  isReview: {
-    type: Boolean,
-    default: false
-  },
-  assigneesIds: {
-    type: Array,
-    default: []
-  },
-  reviewersIds: {
-    type: Array,
-    default: []
-  },
-  taskId: {
-    type: [Number, String],
-    default: null
-  }
+  project: { type: Object, default: null },
+  taskId: { type: [Number, String], default: null },
+  taskStatus: { default: null },
 });
 
+const getStage = (status) => {
+  const s = String(status);
+  if (['10', '11'].includes(s)) return { label: 'Production',  class: 'bg-green-100 text-green-800' };
+  if (['8',  '9' ].includes(s)) return { label: 'Staging',     class: 'bg-yellow-100 text-yellow-800' };
+  return                                { label: 'Development', class: 'bg-blue-100 text-blue-800' };
+};
+
 const isModelOpen = ref(false);
-const deployLogsData = ref([]);
-const filters = inject('filters');
-const isLoading = ref(true);
+const pullRequestData = ref([]);
+const isLoading = ref(false);
 const { flashMessage } = usePage().props;
 
 const columns = [
-{
-    title: 'Created By',
-    field: 'created_by',
-    minWidth: 160,
-  },
   {
-    title: 'Deploy Pull Request',
-    field: 'pull_request',
-    minWidth: 220,
-    formatter: (cell) => {
-      const data = cell.getData().pull_request
-      return data ? data : '-' ;
-    }
-  },
-  {
-    title: 'Deploy Summery',
-    field: 'summary',
-    minWidth: 200,
-    formatter: (cell) => {
-      const data = cell.getData().summary
-      return data ? data : '-' ;
-    }
-  },
-  {
-    title: 'Task Id',
-    field: 'task_id',
+    title: 'PR no.',
+    field: 'pull_request_id',
     minWidth: 120,
   },
   {
-    title: 'Project Name',
-    field: 'project_name',
-    minWidth: 160,
-  },
-  {
-    title: 'Deploy',
-    field: 'deploy',
-    minWidth: 160,
-  },
-  {
-    title: 'Log Created Date',
-    field: 'created_at',
+    title: 'Title',
+    field: 'pull_request_title',
     minWidth: 200,
-    formatter: (cell) => {
-      return filters.formatDate(cell.getData().created_at);
   },
-  }
-
+  {
+    title: 'Repository',
+    field: 'repository_name',
+    minWidth: 160,
+  },
+  {
+    title: 'Status',
+    field: 'status',
+    minWidth: 120,
+  },
+  {
+    title: 'Target Branch',
+    field: 'target_branch',
+    minWidth: 140,
+    formatter: (cell) => {
+      const branch = cell.getValue();
+      if (!branch) return '-';
+      const styles = {
+        main:       'bg-green-100 text-green-800',
+        master:     'bg-green-100 text-green-800',
+        production: 'bg-green-100 text-green-800',
+        staging:    'bg-yellow-100 text-yellow-800',
+      };
+      const style = styles[branch] ?? 'bg-blue-100 text-blue-800';
+      return `<span class="px-2 py-1 rounded-full text-xs font-semibold ${style}">${branch}</span>`;
+    }
+  },
+  {
+    title: 'Created By',
+    field: 'pull_request_sender_username',
+    minWidth: 160,
+  },
+  {
+    title: 'PR Link',
+    field: 'pull_request_url',
+    minWidth: 160,
+    formatter: (cell) => {
+      const url = cell.getValue();
+      return url ? `<a href="${url}" target="_blank" class="text-blue-500 underline">View PR</a>` : '-';
+    }
+  },
 ];
 
-const openDeployLogsModal = async() => {
+const openModal = async () => {
+  isLoading.value = true;
+  isModelOpen.value = true;
 
-  isLoading.value = true
-  const form = {
-    project_id: props.project.id,
-    task_id: props.taskId,
-  }
+  const res = await axios.get('/github/pull-request/logs', {
+    params: { task_id: props.taskId }
+  });
 
-  const res = await axios.get('/deploy/log_list', {params: form});
-   if(res.status === 200){
-    res.data.length === 0
-  ?  sendFlashMessage("error", "No Data found")
-  : (isModelOpen.value = true, deployLogsData.value = res.data, isLoading.value = false);
-
-  }else{
-    console.log('error')
-    isLoading.value = false
-  }
+  pullRequestData.value = res.data?.githubWebhooks || [];
+  isLoading.value = false;
 };
 
 const closeModal = () => {
   isModelOpen.value = false;
-  deployLogsData.value = []
-  isLoading.value = false
-};
-
-const sendFlashMessage = (type, message) => {
-    flashMessage.value = { [type]: message };
+  pullRequestData.value = [];
 };
 </script>
 
 <template>
   <div class="inline-flex gap-3">
-    <app-button outline @click="openDeployLogsModal">Deploy Logs</app-button>
+    <AppButton outline @click="openModal">Pull Requests</AppButton>
   </div>
+
   <Modal :show="isModelOpen" @close="closeModal" maxWidth="7xl">
     <template #header>
+      <h2 class="text-xl font-semibold">Pull Requests</h2>
     </template>
 
-    <div class="h-[300px] w-full" v-if="isLoading">
+    <div class="h-[300px] w-full flex items-center justify-center" v-if="isLoading">
       <AppLoader />
     </div>
-    <div class="min-h-[30vh] max-h-[60vh] px-8 py-4" v-if="deployLogsData && deployLogsData.length > 0">
-      <AppDataTable :data="deployLogsData" :columns="columns"></AppDataTable>
+    <div class="min-h-[30vh] max-h-[60vh] px-8 py-4" v-else-if="pullRequestData.length > 0">
+      <AppDataTable :data="pullRequestData" :columns="columns" />
     </div>
-    <div v-else  class="h-[300px] w-full flex items-center justify-center">
-      <span>No Data found</span>
+    <div v-else class="h-[300px] w-full flex items-center justify-center">
+      <span>No pull requests found</span>
     </div>
   </Modal>
-
 </template>
