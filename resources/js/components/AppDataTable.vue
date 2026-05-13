@@ -3,7 +3,7 @@ import { TabulatorFull as Tabulator } from 'tabulator-tables';
 import AppTextInput from './AppTextInput.vue';
 import AppButton from './AppButton.vue';
 import { debounce } from 'lodash';
-import { computed, onMounted, ref, watch, defineEmits } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useParentElement, useElementSize } from '@vueuse/core';
 type DownloadType = 'csv' | 'json' | 'xlsx' | 'pdf'
 
@@ -65,6 +65,7 @@ onMounted(() => {
       height: `100%`,
       movableRows: props.movableRows,
       columns: isChecked.value,
+      rowFormatter: props.rowFormatter ?? undefined,
       data: props.data,
       // columnDefaults: {
       //   tooltip: true //show tool tips on cells
@@ -110,13 +111,18 @@ onMounted(() => {
 
 window.addEventListener('resize', dynamicTableHeight)
 
+onUnmounted(() => {
+  window.removeEventListener('resize', dynamicTableHeight)
+  document.removeEventListener('input', handleHeaderFilterInput)
+})
+
 const downloadCSV = async () => {
   if (tabulator.value) {
     const downloadOption:
       | DownloadType
       | ((columns: TableColumn[], data: any, options: any, setFileContents: any) => any) =
-      props.downloadOption || 'csv' // Provide a default value
-    const downloadFileName = props.downloadFileName || 'download' // Provide a default file name
+      props.downloadOption as DownloadType
+    const downloadFileName = props.downloadFileName
     tabulator.value.download(downloadOption, downloadFileName + '.csv')
   } else {
     console.error('CSV download failed: Tabulator instance or method not found')
@@ -168,36 +174,30 @@ watch(
     // tabulator.value.redraw(true);
     // tabulator.value('clearData');
     // tabulator.value.destroy();
-    tabulator.value.setData(props.data);
+    if (tabulator.value) {
+      tabulator.value.setData(props.data);
+    }
   }
 );
 
-// if(table.value){
-
-//   table.value.on("rowMoved", function(row){
-//       console.log("Row: " + row.getData().name + " has been moved");
-//   });
-// }
-
 let isFiltering = ref(false);
 
-document.addEventListener(
-  'input',
-  debounce((event: Event) => {
-    const input = event.target as HTMLInputElement;
+const handleHeaderFilterInput = debounce((event: Event) => {
+  const input = event.target as HTMLInputElement;
 
-    if (input && input.closest('.tabulator-header-filter input')) {
-      const inputValue = input.value.trim();
-      console.log('log only for header filter check');
+  if (input && input.closest('.tabulator-header-filter input')) {
+    const inputValue = input.value.trim();
+    console.log('log only for header filter check');
 
-      if (inputValue && tabulator.value) {
-        isFiltering.value = true;
-      } else {
-        isFiltering.value = false;
-      }
+    if (inputValue && tabulator.value) {
+      isFiltering.value = true;
+    } else {
+      isFiltering.value = false;
     }
-  }, 300)
-);
+  }
+}, 300);
+
+document.addEventListener('input', handleHeaderFilterInput);
 
 onMounted(() => {
   let isUpdating = false;

@@ -146,7 +146,8 @@ class TaskController extends Controller
         $tasks = $tasks->with(['collaborators' => function ($query) {
             $query->selectRaw('task_collaborators.id, task_collaborators.collaborator,task_collaborators.taskId,task_collaborators.flag,
             (SELECT name FROM users WHERE task_collaborators.collaborator = users.id) AS collaborator');
-        }, 'taskStatus:id,value,name'])
+        }, 'taskStatus:id,value,name', 
+            'githubWebhooks:id,task_id,pull_request_id,pull_request_title,status,pull_request_url,sender_username,repository_name,created_at'])
             ->orderBy('id', 'DESC');
 
         $projects = fn () => Project::select('id', 'name as group_name', 'name', 'sub_projects')
@@ -154,13 +155,13 @@ class TaskController extends Controller
             ->with(['subprojects:id,name,sub_projects'])->get();
 
         return Inertia::render('Tasks/index', [
-            'tasks'      => fn () => $tasks->get(),
-            'routeFlag'  => fn () => $routeFlag,
-            'start_from' => fn () => $start_from,
-            'end_to'     => fn () => $end_to,
-            'projects'   => Inertia::lazy(fn () => $projects()),
-            'task_types' => Inertia::lazy(fn () => TaskType::get(['id', 'type'])),
-            'users'      => Inertia::lazy(fn () =>  User::where('status', '1')->get(['id', 'name'])),
+            'tasks'       => fn () => $tasks->get(),
+            'routeFlag'   => fn () => $routeFlag,
+            'start_from'  => fn () => $start_from,
+            'end_to'      => fn () => $end_to,
+            'projects'    => Inertia::lazy(fn () => $projects()),
+            'task_types'  => Inertia::lazy(fn () => TaskType::get(['id', 'type'])),
+            'users'       => Inertia::lazy(fn () =>  User::where('status', '1')->get(['id', 'name'])),
         ]);
     }
 
