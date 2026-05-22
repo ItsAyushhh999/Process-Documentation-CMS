@@ -11,6 +11,10 @@ const props = defineProps({
   project: { type: Object, default: null },
   taskId: { type: [Number, String], default: null },
   taskStatus: { default: null },
+  users: {
+    type: Array,
+    default: []
+  },
 });
 
 const getStage = (status) => {
@@ -65,8 +69,12 @@ const columns = [
   },
   {
     title: 'Created By',
-    field: 'pull_request_sender_username',
+    field: 'user',
     minWidth: 160,
+    formatter: (cell) => {
+      const user = cell.getValue();
+      return user?.name ?? '-';
+    }
   },
   {
     title: 'PR Link',

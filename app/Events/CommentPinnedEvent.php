@@ -2,25 +2,25 @@
 
 namespace App\Events;
 
-//use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-//use Illuminate\Broadcasting\PresenceChannel;
-use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class NewNotificationEvent implements ShouldBroadcast
+class CommentPinnedEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     /**
      * Create a new event instance.
      */
-    public function __construct(public array $notification, public int $userId)
-    {
-        //
-    }
+    public function __construct(
+        public int $taskId,
+        public int $commentId,
+        public int $isPinned,
+        public int $totalPinned,
+    ) {}
 
     /**
      * Get the channels the event should broadcast on.
@@ -29,13 +29,11 @@ class NewNotificationEvent implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('user.' . $this->userId),
-        ];
+        return [new Channel('task.' . $this->taskId)];
     }
 
     public function broadcastAs(): string
     {
-        return 'new.notification';
+        return 'comment.pinned';
     }
 }

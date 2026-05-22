@@ -17,6 +17,7 @@ class TaskStatusUpdated implements ShouldBroadcastNow
 
     public $task;
     public $newStatus;
+    public $oldStatus;
 
     /**
      * Create a new event instance.
@@ -28,6 +29,7 @@ class TaskStatusUpdated implements ShouldBroadcastNow
     {
         $this->task = $task;
         $this->newStatus = $task->status;
+        $this->oldStatus = $task->getOriginal('status');
     }
 
     /**
@@ -57,8 +59,18 @@ class TaskStatusUpdated implements ShouldBroadcastNow
      */
     public function broadcastWith()
     {
-        return [
-            'new_status' => $this->newStatus
+         return [
+            'new_status'     => $this->newStatus,
+            'old_status'     => $this->oldStatus,
+            'task_id'        => $this->task->id,
+            'user'           => auth()->user()->name ?? 'System',
+            'profie_picture' => auth()->user()->profile_picture ?? null,
+            'created_at'     => now()->toDateTimeString(),
+            'is_status_log'  => true,
+            'comments'       => null,
+            'reply_id'       => 0,
+            'get_reply_image'=> [],
+            'replies'        => [],
         ];
     }
 }

@@ -23,6 +23,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['reloadPage']);
+const livePin = ref(null);
 const TasksComment = ref(null);
 const loadingComment = ref(true);
 const base_url = route().t.url;
@@ -42,6 +43,8 @@ const selectFiles = (e) => {
   const files = Array.from(e.target.files);
   selectedImage.value = files;
 };
+
+const currentTaskStatus = ref(props.taskDetail.task.status);
 
 const form = useForm({
   taskId: props.taskDetail.task.id,
@@ -126,7 +129,7 @@ const createComment = async () => {
   const formData = new FormData();
   formData.append('taskId', props.taskDetail.task.id);
   formData.append('comment', comment.value);
-  formData.append('status', props.taskDetail.task.status);
+  formData.append('status', currentTaskStatus.value);
   if (selectedImage.value) {
     selectedImage.value.forEach(file => formData.append('attachments[]', file));
   }
@@ -136,7 +139,8 @@ const createComment = async () => {
     comment.value = '';
     selectedImage.value = null;
   } catch (error) {
-    console.error(error);
+    console.error('Status:', error.response?.status);
+    console.error('Error body:', error.response?.data);
   } finally {
     btnLoading.value = false;
   }
@@ -165,7 +169,12 @@ onMounted(() => {
     
     // Subscribe to task status updates
     const channel = pusher.subscribe(`task.${props.taskDetail.task.id}`);
-    
+
+    channel.bind('comment.pinned', (data) => {
+      livePin.value = data;
+    });
+
+    /*
     channel.bind('task.status.updated', (data) => {
       // Update the task status in the component
       if (props.taskDetail && props.taskDetail.task) {
@@ -173,6 +182,7 @@ onMounted(() => {
       }
       //reloadComments();
     });
+    */
   }
 });
 
@@ -192,19 +202,67 @@ watch(() => props.taskDetail?.task?.id, (newId, oldId) => {
   }
 });
 
+watch(() => props.taskDetail.task.status, (newStatus) => {
+  if (newStatus !== undefined) {
+    currentTaskStatus.value = newStatus;
+    form.status = newStatus;
+  }
+});
+
+watch(livePin, (data) => {
+  if (!data || !TasksComment.value) return;
+
+  // Update isPinned on the matching comment in activities
+  const comment = TasksComment.value.activities.find(c => c.id === data.commentId);
+  if (comment) {
+    comment.isPinned = data.isPinned;
+  }
+
+  // Update the pinned count in the header
+  TasksComment.value.total_pinned_comments = data.totalPinned;
+});
+
 watch(() => props.liveComment, (data) => {
   if (!data || !TasksComment.value) return;
-  console.log('📨 watcher triggered', data);
 
-  if (data.reply_id && data.reply_id !== 0) {
+  if (data.is_status_log && data.new_status === data.old_status) return;
+  
+  // Status-only update — no comment body
+  if (data.is_status_log) {
+  TasksComment.value.activities.unshift({
+    id: Date.now(),
+    comments: null,
+    created_at: data.created_at,
+    createdBy: data.user ?? 'System',
+    currentStatus:  String(data.new_status), 
+    previousStatus: String(data.old_status), 
+    get_reply_image: [],
+    replies: [],
+    checked_by: { name: '' },
+  });
+  return;
+}
+
+  const normalized = {
+    ...data,
+    reply_creator: {
+      name: data.user ?? 'Unknown',
+      profile_picture: data.profie_picture ?? null,
+    },
+    get_reply_image: data.getCommentImage ?? [],
+    checked_by: { name: '' },
+  };
+
+  if (data.reply_id && data.reply_id != 0) {
     const parent = TasksComment.value.activities.find(
-      (c) => c.id === data.reply_id
+      (c) => c.id == data.reply_id  // == handles string/number mismatch
     );
     if (parent) {
-      parent.replies = [...(parent.replies || []), data];
+      if (!parent.replies) parent.replies = [];
+      parent.replies = [...parent.replies, normalized];
     }
   } else {
-    TasksComment.value.activities.unshift(data);
+    TasksComment.value.activities.unshift(normalized);
   }
 });
 
@@ -241,7 +299,8 @@ onUnmounted(() => {
               >Status*</label
             >
             <select
-              v-model="taskDetail.task.status"
+              v-model="currentTaskStatus"
+              @change="form.status = currentTaskStatus"
               class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-500 text-primary-900 dark:text-gray-300 rounded-md outline-none focus:ring-0 hover:bg-gray-100 dark:hover:bg-gray-700 focus:border-primary-500 block w-full py-3 px-2 h-[44px]"
               name="priority"
             >

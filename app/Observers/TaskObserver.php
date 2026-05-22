@@ -2,8 +2,9 @@
 
 namespace App\Observers;
 
-use App\Models\Task;
 use App\Events\TaskStatusUpdated;
+use App\Http\Controllers\NotificationController;
+use App\Models\Task;
 
 class TaskObserver
 {
@@ -26,7 +27,10 @@ class TaskObserver
      */
     public function created(Task $task)
     {
-        //
+        app(NotificationController::class)->create([
+            'notification' => 'New task has been created.',
+            'taskId'       => $task->id,
+        ]);
     }
 
     /**

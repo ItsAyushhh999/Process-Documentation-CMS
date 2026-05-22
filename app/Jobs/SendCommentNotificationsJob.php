@@ -128,5 +128,13 @@ class SendCommentNotificationsJob implements ShouldQueue
         } catch (Exception $e) {
             Log::error('Comment slack failed: ' . $e->getMessage());
         }
+    
+        if ((int)$this->taskOldStatus !== (int)$this->task->status) {
+            (new NotificationController())->create([
+                'taskId'       => $this->task->id,
+                'notification' => "Status changed to {$this->statusLabel($this->task->status)} from {$this->statusLabel($this->taskOldStatus)}",
+                'created_by'   => $this->user->id,
+            ]);
+        }
     }
 }

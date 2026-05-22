@@ -71,7 +71,7 @@ class GithubPrWebhooksController extends Controller
     public function githubPrs(Request $request)
     {
         $users = User::select('id', 'name', 'profile_picture')->latest()->get();
-        $githubWebhooks = GithubWebhook::with('task:id,title')
+        $githubWebhooks = GithubWebhook::with('task:id,title', 'user:id,name')
                                         ->when($request->task_id, fn($q) => $q->where('task_id', $request->task_id))
                                         ->orderBy('id', 'desc')
                                         ->get();
