@@ -21,6 +21,15 @@ class NotificationController extends Controller
         $notification->created_by = $data['created_by'] ?? Auth::id();
         $notification->save();
         $notification->refresh();
+        /*
+        $currentUserId = $data['created_by'] ?? Auth::id();
+        
+        // Mark notification as read for the current user (creator)
+        NotificationRead::firstOrCreate([
+            'notification_id' => $notification->id,
+            'user_id' => $currentUserId,
+        ]); */
+        
         // broadcast to all collaborators and creator
 
         $taskId = data_get($data, 'taskId');
@@ -45,7 +54,7 @@ class NotificationController extends Controller
                     'id' => $notification->id,
                     'notification' => $notification->notification,
                     'task_id' => $notification->task_id,
-                    'created_by' => Auth::user()?->name,
+                    'created_by' => $data['created_by'] ?? Auth::id(),
                     'created_at' => $notification->created_at?->toDateTimeString() ?? now()->toDateTimeString(),
                     'task_name'    => Task::where('id', $notification->task_id)->value('title'), 
                     'is_read'      => false,
@@ -55,7 +64,7 @@ class NotificationController extends Controller
 
     public function getLatestNotifications(Request $request)
     {
-       // dd('ok');
+        // dd('ok');
         $userId = Auth::id();
         $perPage = 10; // Number of notifications per page
         $page = (int) $request->input('page', 1);
@@ -70,7 +79,7 @@ class NotificationController extends Controller
                 })
                     ->orWhere('tasks.createdBy', $userId); // Or the user is the creator of the task
             })
-            //->where('notifications.created_by', '!=', $userId) // Exclude notifications created by the authenticated user
+            ->where('notifications.created_by', '!=', $userId) // Exclude notifications created by the authenticated user
             ->join('tasks', 'tasks.id', 'notifications.task_id')
             ->orderBy('id', 'DESC')
             ->paginate($perPage, ['*'], 'page', $page);
@@ -136,8 +145,9 @@ class NotificationController extends Controller
                     ->orwhereHas('task', fn ($q) => $q->where('createdBy', $userId));
         })
         ->whereDoesntHave('reads', fn ($q) => $q->where('user_id', $userId))
+        ->where('notifications.created_by', '!=', $userId)
         ->count();
-
+        
         return response()->json(['unread_count' => $count]);
     }
 }

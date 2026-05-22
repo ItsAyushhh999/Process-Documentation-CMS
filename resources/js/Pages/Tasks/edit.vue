@@ -113,12 +113,9 @@ onMounted(() => {
   });
 
   channel.bind('task.status.updated', (data) => {
+    console.log('Status update received:', data);
     props.task.status = data.new_status;
-  });
-
-  channel.bind('task.comment', (data) => {
-  console.log('📨 RAW data from Pusher:', JSON.stringify(data));
-  liveComment.value = data;
+    liveComments.value = { ...data, _ts: Date.now() };
   });
 });
 

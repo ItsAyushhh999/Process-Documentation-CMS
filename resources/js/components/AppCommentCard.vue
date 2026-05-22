@@ -30,12 +30,12 @@ const emit = defineEmits(['reloadPage'])
 const isLoading = ref(false);
 
 const formatNameToInitials = (name) => {
-    if(name === 0) return  'BOT';
-    if(typeof name == 'string' && name.length > 0){
-        const arr = name.split(' ');
-        return `${arr[0].charAt(0)}${arr[1].charAt(0)}`;
-    }
-    return "AI"
+  if (!name || name === 0) return 'BOT';
+  if (typeof name === 'string' && name.length > 0) {
+    const arr = name.split(' ');
+    return `${arr[0]?.charAt(0) ?? ''}${arr[1]?.charAt(0) ?? ''}`;
+  }
+  return 'AI';
 };
 
 const pinModal = async (id) => {
@@ -80,17 +80,6 @@ const handleReplyComment = async () => {
   try {
     await axios.post(route('tasks.comments.storeV2'), formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    // add reply locally for poster
-    if (!props.data.replies) props.data.replies = [];
-    props.data.replies.push({
-      id: Date.now(),
-      comments: replyComment.value,
-      reply_creator: { name: 'You', profile_picture: null },
-      created_at: new Date().toISOString(),
-      check: '0',
-      checked_by: { name: '' },
-      get_reply_image: [],
     });
     closeModal();
   } catch (error) {

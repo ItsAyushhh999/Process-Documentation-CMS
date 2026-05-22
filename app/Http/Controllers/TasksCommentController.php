@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\CommentPinnedEvent;
 use App\Events\GenerateFeedEvent;
+use App\Events\TaskStatusUpdated;
 use App\Http\Services\TaskService;
 use App\Jobs\SendCommentNotificationsJob;
 use App\Models\Attachment;
@@ -73,8 +75,37 @@ class TasksCommentController extends Controller
             ]);
         }
 
+        $statusLabels = [
+            0 => 'Assigned',
+            1 => 'In progress',
+            2 => 'Assigned for review',
+            3 => 'Reviewing',
+            4 => 'Reviewed',
+            5 => 'Completed',
+            6 => 'Closed',
+            7 => 'Created',
+            8 => 'Staging - Ready to upload',
+            9 => 'Staging - Upload completed',
+            10 => 'Live - Ready to upload',
+            11 => 'Live - Upload completed',
+        ];
+
+        $oldLabel = $statusLabels[$taskOldStatus] ?? 'Unknown';
+        $newLabel = $statusLabels[(int)$request->status] ?? 'Unknown';
+
         //task comment
         if (!($request->comment)) {
+            if ((int)$taskOldStatus !== (int)$request->status) 
+            {
+                broadcast(new TaskStatusUpdated($task, $taskOldStatus));
+
+                app(NotificationController::class)->create([
+                    'notification' => "Status changed to {$newLabel} from {$oldLabel}",
+                    'taskId' => $task->id,
+                    'created_by' => Auth::id(),
+                ]);
+            }
+
             return response()->json(['success'=> 'true', 'message' => 'Status updated.']);
         }
 
@@ -309,7 +340,7 @@ class TasksCommentController extends Controller
         }
 
         //return redirect()->back()->with('success', 'Comment saved.');
-        response()->json(['status' => 'success', 'message' => 'Comment saved.']);
+        return response()->json(['status' => 'success', 'message' => 'Comment saved.']);
     }
 
     public function event($type, $task)
@@ -413,6 +444,18 @@ class TasksCommentController extends Controller
         $comment->isPinned = $isPinned;
         $comment->pinnedBy = $isPinned ? Auth::id() : 0;
         $comment->save();
+        
+        // Count the total number of pinned comments for the same task
+        $totalPinned = TaskComment::where('taskId', $comment->taskId)
+                    ->where('isPinned', '1')
+                    ->count();
+
+        broadcast(new CommentPinnedEvent(
+            taskId: (int) $comment->taskId,
+            commentId: (int) $comment->id,
+            isPinned: (int) $isPinned,
+            totalPinned: $totalPinned,
+        ));
 
         // Determine the message based on whether the comment is pinned or unpinned
         $message = $isPinned ? 'Pinned' : 'Unpinned';
